@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Download, Calendar } from 'lucide-react';
+import { Download, Calendar, FileText } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
 import StatsCards from '../components/StatsCards';
 import CallsTable from '../components/CallsTable';
 import Charts from '../components/Charts';

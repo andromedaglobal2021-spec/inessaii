@@ -11,13 +11,47 @@ const Dashboard = () => {
   const [calls, setCalls] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [dateFilter, setDateFilter] = useState('day'); // day, week, month, year
+  const [dateFilter, setDateFilter] = useState('day'); // day, week, month, year, custom
+  const [customDate, setCustomDate] = useState(new Date().toISOString().split('T')[0]);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  const getFromDate = (filter, customDateValue) => {
+    const now = new Date();
+    const from = new Date();
+
+    switch (filter) {
+      case 'day':
+        from.setHours(0, 0, 0, 0);
+        return from.toISOString();
+      case 'week':
+        from.setDate(now.getDate() - 7);
+        return from.toISOString();
+      case 'month':
+        from.setDate(now.getDate() - 30);
+        return from.toISOString();
+      case 'year':
+        from.setFullYear(now.getFullYear() - 1);
+        return from.toISOString();
+      case 'custom':
+        return new Date(customDateValue).toISOString();
+      default:
+        from.setDate(now.getDate() - 30); // Default to month
+        return from.toISOString();
+    }
+  };
 
   const fetchData = async (search = '', status = '') => {
     try {
-      // In a real app, we would pass dateFilter to the backend
+      const fromDate = getFromDate(dateFilter, customDate);
+      
       const [callsRes, balanceRes] = await Promise.all([
-        axios.get('/api/calls', { params: { search, status } }),
+        axios.get('/api/calls', { 
+          params: { 
+            search, 
+            status,
+            from_date: fromDate
+          } 
+        }),
         axios.get('/api/balance')
       ]);
 
@@ -68,10 +102,16 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchData();
-  }, [dateFilter]);
+  }, [dateFilter, customDate]);
 
   const handleSearch = (searchTerm, statusFilter) => {
     fetchData(searchTerm, statusFilter);
+  };
+
+  const handleDateSelect = (e) => {
+    setCustomDate(e.target.value);
+    setDateFilter('custom');
+    setShowDatePicker(false);
   };
 
   const handleExportCSV = () => {

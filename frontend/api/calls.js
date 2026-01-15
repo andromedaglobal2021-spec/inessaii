@@ -40,7 +40,7 @@ export default async function handler(req, res) {
   }
 }
 
-async function fetchVoximplantCalls() {
+async function fetchVoximplantCalls(fromDateStr) {
   const accountId = process.env.VOXIMPLANT_ACCOUNT_ID;
   const apiKey = process.env.VOXIMPLANT_API_KEY;
 
@@ -55,7 +55,7 @@ async function fetchVoximplantCalls() {
       api_key: apiKey,
       count: 50, // Limit for real-time fetch
       with_records: true,
-      from_date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString() // Last 30 days
+      from_date: fromDateStr || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
     };
 
     const response = await axios.get(`${VOXIMPLANT_API_URL}/GetCallHistory`, { params });

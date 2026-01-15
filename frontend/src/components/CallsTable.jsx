@@ -154,17 +154,54 @@ const CallsTable = ({ calls, onSearch }) => {
                 {expandedRow === call.id && (
                   <tr className="bg-gray-50">
                     <td colSpan="7" className="px-6 py-6">
-                      <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-inner">
-                        <div className="flex items-start space-x-3 mb-4">
-                          <FileText className="w-5 h-5 text-gray-400 mt-0.5" />
-                          <div>
-                            <h4 className="text-sm font-semibold text-gray-900">Транскрибация разговора</h4>
-                            <p className="text-xs text-gray-500 mt-1">Источник: {call.source}</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-inner">
+                          <div className="flex items-start space-x-3 mb-4">
+                            <FileText className="w-5 h-5 text-gray-400 mt-0.5" />
+                            <div>
+                              <h4 className="text-sm font-semibold text-gray-900">Транскрибация разговора</h4>
+                              <p className="text-xs text-gray-500 mt-1">Источник: {call.source}</p>
+                            </div>
+                          </div>
+                          <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
+                            {call.transcription || 'Транскрибация отсутствует.'}
+                          </p>
+                        </div>
+                        
+                        <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-inner h-fit">
+                          <h4 className="text-sm font-semibold text-gray-900 mb-4">Детали звонка</h4>
+                          <div className="space-y-3">
+                            <div className="flex justify-between py-2 border-b border-gray-100">
+                              <span className="text-sm text-gray-500">ID звонка</span>
+                              <span className="text-sm font-medium text-gray-900">{call.id}</span>
+                            </div>
+                            <div className="flex justify-between py-2 border-b border-gray-100">
+                              <span className="text-sm text-gray-500">Стоимость</span>
+                              <span className="text-sm font-medium text-gray-900">{call.cost !== undefined ? `${call.cost} ₽` : '-'}</span>
+                            </div>
+                            <div className="flex justify-between py-2 border-b border-gray-100">
+                              <span className="text-sm text-gray-500">Статус</span>
+                              <span className={`text-sm font-medium ${call.status === 'completed' ? 'text-green-600' : 'text-red-600'}`}>
+                                {call.status === 'completed' ? 'Успешный' : 'Пропущенный'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between py-2">
+                              <span className="text-sm text-gray-500">Аудиозапись</span>
+                              {call.audio_url ? (
+                                <a 
+                                  href={call.audio_url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-sm font-medium text-blue-600 hover:text-blue-800"
+                                >
+                                  Скачать
+                                </a>
+                              ) : (
+                                <span className="text-sm text-gray-400">Нет записи</span>
+                              )}
+                            </div>
                           </div>
                         </div>
-                        <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
-                          {call.transcription || 'Транскрибация отсутствует.'}
-                        </p>
                       </div>
                     </td>
                   </tr>

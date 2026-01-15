@@ -70,6 +70,7 @@ async function fetchVoximplantCalls() {
       status: (record.duration > 0 && record.successful !== false) ? 'completed' : 'missed',
       transcription: null,
       audio_url: record.record_url || null,
+      cost: record.cost || 0,
       timestamp: new Date(record.start_date).toISOString(),
       sentiment: (record.duration > 0 && record.successful !== false) ? 'neutral' : 'negative',
       source: 'Voximplant'

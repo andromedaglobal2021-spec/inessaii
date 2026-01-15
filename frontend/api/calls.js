@@ -8,11 +8,11 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: 'Method Not Allowed' });
   }
 
-  const { search, status } = req.query;
+  const { search, status, from_date, to_date } = req.query;
 
   try {
-    const voximplantCalls = await fetchVoximplantCalls();
-    const elevenLabsCalls = await fetchElevenLabsCalls();
+    const voximplantCalls = await fetchVoximplantCalls(from_date, to_date);
+    const elevenLabsCalls = await fetchElevenLabsCalls(); // TODO: Implement date filtering for ElevenLabs too if needed
 
     let allCalls = [...voximplantCalls, ...elevenLabsCalls];
 

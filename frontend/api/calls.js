@@ -53,7 +53,7 @@ async function fetchVoximplantCalls(fromDateStr) {
     const params = {
       account_id: accountId,
       api_key: apiKey,
-      count: 50, // Limit for real-time fetch
+      count: 1000, // Increased limit for real-time fetch
       with_records: true,
       from_date: fromDateStr || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
     };

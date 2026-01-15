@@ -102,16 +102,10 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchData();
-  }, [dateFilter, customDate]);
+  }, [dateFilter]);
 
   const handleSearch = (searchTerm, statusFilter) => {
     fetchData(searchTerm, statusFilter);
-  };
-
-  const handleDateSelect = (e) => {
-    setCustomDate(e.target.value);
-    setDateFilter('custom');
-    setShowDatePicker(false);
   };
 
   const handleExportCSV = () => {
@@ -202,7 +196,7 @@ const Dashboard = () => {
           </div>
           
           <div className="bg-gray-100 p-1 rounded-lg flex items-center">
-            {['day', 'week', 'month', 'year'].map((filter) => (
+            {['day', 'week', 'month', 'year', 'all'].map((filter) => (
               <button
                 key={filter}
                 onClick={() => setDateFilter(filter)}
@@ -216,14 +210,35 @@ const Dashboard = () => {
                 {filter === 'week' && 'Неделя'}
                 {filter === 'month' && 'Месяц'}
                 {filter === 'year' && 'Год'}
+                {filter === 'all' && 'Все время'}
               </button>
             ))}
           </div>
           
-          <button className="flex items-center space-x-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg hover:bg-gray-50 transition shadow-sm text-sm font-medium">
-            <Calendar className="w-4 h-4" />
-            <span>Выбрать даты</span>
-          </button>
+          <div className="relative">
+            <button 
+              onClick={() => setShowDatePicker(!showDatePicker)}
+              className={`flex items-center space-x-2 px-4 py-2 border rounded-lg transition shadow-sm text-sm font-medium ${
+                dateFilter === 'custom' 
+                  ? 'bg-blue-50 border-blue-200 text-blue-700' 
+                  : 'bg-white border-gray-200 text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <Calendar className="w-4 h-4" />
+              <span>{dateFilter === 'custom' ? new Date(customDate).toLocaleDateString() : 'Выбрать дату'}</span>
+            </button>
+            
+            {showDatePicker && (
+              <div className="absolute right-0 mt-2 p-2 bg-white border border-gray-200 rounded-lg shadow-xl z-50">
+                <input 
+                  type="date" 
+                  value={customDate}
+                  onChange={handleDateSelect}
+                  className="p-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

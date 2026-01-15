@@ -108,6 +108,12 @@ const Dashboard = () => {
     fetchData(searchTerm, statusFilter);
   };
 
+  const handleDateSelect = (e) => {
+    setCustomDate(e.target.value);
+    setDateFilter('custom');
+    setShowDatePicker(false);
+  };
+
   const handleExportCSV = () => {
     const headers = ['ID,Date,Number,Duration,Status,Source,Sentiment,Transcription,Audio URL'];
     const csvContent = calls.map(call => {

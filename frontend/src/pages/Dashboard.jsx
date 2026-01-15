@@ -29,7 +29,7 @@ const Dashboard = () => {
         from.setDate(now.getDate() - 7);
         return { from: from.toISOString(), to: to.toISOString() };
       case 'month':
-        from.setDate(now.getDate() - 30);
+        from.setDate(now.getDate() - 90); // Expanded to 90 days to include previous months
         return { from: from.toISOString(), to: to.toISOString() };
       case 'year':
         from.setFullYear(now.getFullYear() - 1);

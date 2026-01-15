@@ -12,27 +12,54 @@ export default async function handler(req, res) {
 
   if (!accountId || !apiKey) {
     // Return mock balance for demo if keys are missing
-    return res.status(200).json({ balance: 0, currency: 'RUB' });
+    return res.status(200).json({ balance: 0, expenses: 0, currency: 'RUB' });
   }
 
   try {
-    const params = {
+    const authParams = {
       account_id: accountId,
       api_key: apiKey
     };
 
-    const response = await axios.get(`${VOXIMPLANT_API_URL}/GetAccountInfo`, { params });
+    // 1. Get Balance
+    const balanceResponse = await axios.get(`${VOXIMPLANT_API_URL}/GetAccountInfo`, { params: authParams });
+    const balance = balanceResponse.data?.result?.balance || 0;
+    const currency = balanceResponse.data?.result?.currency || 'RUB';
 
-    if (response.data && response.data.result) {
-      return res.status(200).json({
-        balance: response.data.result.balance,
-        currency: response.data.result.currency
-      });
+    // 2. Get Expenses for the current month
+    // Determine the start of the current month
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const endOfToday = now.toISOString();
+
+    const historyParams = {
+      ...authParams,
+      from_date: startOfMonth,
+      to_date: endOfToday,
+      count: 1000 // Ensure we get enough records. Pagination might be needed for heavy usage.
+    };
+
+    const historyResponse = await axios.get(`${VOXIMPLANT_API_URL}/GetTransactionHistory`, { params: historyParams });
+    
+    let expenses = 0;
+    if (historyResponse.data && historyResponse.data.result) {
+      // Sum up all negative amounts (spendings).
+      // Usually transactions are: negative for cost, positive for refill.
+      // We want to show "Expenses", so we sum negative values and make them positive.
+      expenses = historyResponse.data.result.reduce((acc, tx) => {
+        const amount = parseFloat(tx.amount);
+        return amount < 0 ? acc + Math.abs(amount) : acc;
+      }, 0);
     }
 
-    res.status(200).json({ balance: 0, currency: 'RUB' });
+    return res.status(200).json({
+      balance: balance,
+      expenses: parseFloat(expenses.toFixed(2)),
+      currency: currency
+    });
+
   } catch (error) {
-    console.error('Error fetching Voximplant balance:', error);
-    res.status(500).json({ message: 'Error fetching balance' });
+    console.error('Error fetching Voximplant data:', error);
+    res.status(500).json({ message: 'Error fetching data', error: error.message });
   }
 }

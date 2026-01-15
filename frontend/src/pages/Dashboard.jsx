@@ -56,7 +56,8 @@ const Dashboard = () => {
         completedCalls: 120,
         missedCalls: 30,
         averageDuration: 85,
-        balance: 12500 // Mock balance for demo
+        balance: 12500, // Mock balance for demo
+        expenses: 4500 // Mock expenses for demo
       };
       setCalls(mockCalls);
       setStats(mockStats);

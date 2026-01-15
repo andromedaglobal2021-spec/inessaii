@@ -1,5 +1,5 @@
 import React from 'react';
-import { Phone, Clock, PhoneOff, TrendingUp, TrendingDown, Activity } from 'lucide-react';
+import { Phone, Clock, PhoneOff, TrendingUp, TrendingDown, Activity, Wallet } from 'lucide-react';
 
 const StatCard = ({ title, value, subtext, trend, trendValue, icon: Icon }) => (
   <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-between h-full hover:shadow-md transition-shadow">

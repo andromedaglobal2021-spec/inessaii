@@ -15,41 +15,54 @@ const Dashboard = () => {
   const [customDate, setCustomDate] = useState(new Date().toISOString().split('T')[0]);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
-  const getFromDate = (filter, customDateValue) => {
+  const getDateRange = (filter, customDateValue) => {
     const now = new Date();
     const from = new Date();
+    const to = new Date(); // Default to now
 
     switch (filter) {
       case 'day':
         from.setHours(0, 0, 0, 0);
-        return from.toISOString();
+        to.setHours(23, 59, 59, 999);
+        return { from: from.toISOString(), to: to.toISOString() };
       case 'week':
         from.setDate(now.getDate() - 7);
-        return from.toISOString();
+        return { from: from.toISOString(), to: to.toISOString() };
       case 'month':
         from.setDate(now.getDate() - 30);
-        return from.toISOString();
+        return { from: from.toISOString(), to: to.toISOString() };
       case 'year':
         from.setFullYear(now.getFullYear() - 1);
-        return from.toISOString();
+        return { from: from.toISOString(), to: to.toISOString() };
+      case 'all':
+        return { from: new Date('2020-01-01').toISOString(), to: to.toISOString() };
       case 'custom':
-        return new Date(customDateValue).toISOString();
+        // For custom date, we want the whole day: 00:00 to 23:59
+        const selectedDate = new Date(customDateValue);
+        const customFrom = new Date(selectedDate);
+        customFrom.setHours(0, 0, 0, 0);
+        
+        const customTo = new Date(selectedDate);
+        customTo.setHours(23, 59, 59, 999);
+        
+        return { from: customFrom.toISOString(), to: customTo.toISOString() };
       default:
-        from.setDate(now.getDate() - 30); // Default to month
-        return from.toISOString();
+        from.setDate(now.getDate() - 30);
+        return { from: from.toISOString(), to: to.toISOString() };
     }
   };
 
   const fetchData = async (search = '', status = '') => {
     try {
-      const fromDate = getFromDate(dateFilter, customDate);
+      const { from, to } = getDateRange(dateFilter, customDate);
       
       const [callsRes, balanceRes] = await Promise.all([
         axios.get('/api/calls', { 
           params: { 
             search, 
             status,
-            from_date: fromDate
+            from_date: from,
+            to_date: to
           } 
         }),
         axios.get('/api/balance')

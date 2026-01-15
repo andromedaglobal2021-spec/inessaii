@@ -73,6 +73,12 @@ const StatsCards = ({ stats }) => {
         trendValue="5% за период"
         icon={TrendingUp}
       />
+      <StatCard
+        title="Баланс Voximplant"
+        value={`${stats.balance || 0} ₽`}
+        subtext="остаток средств"
+        icon={Wallet}
+      />
     </div>
   );
 };

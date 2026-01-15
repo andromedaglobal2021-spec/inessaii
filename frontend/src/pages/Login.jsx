@@ -35,6 +35,17 @@ const Login = () => {
         console.error('Server error data:', err.response.data);
         if (err.response.status === 401) {
           setError('Неверный пароль');
+        } else if (err.response.status === 404 || err.response.status >= 500) {
+          // 404 (Server not found/Endpoint not found) or 500+ (Server error)
+          // Fallback to demo mode
+          console.warn(`Server responded with ${err.response.status}. Falling back to demo mode.`);
+          if (password === '1234') {
+            localStorage.setItem('token', 'demo-token');
+            alert('Внимание: Сервер недоступен или не настроен (Vercel). Включен демонстрационный режим.');
+            navigate('/dashboard');
+          } else {
+            setError(`Ошибка сервера: ${err.response.status}.`);
+          }
         } else {
           setError(`Ошибка сервера: ${err.response.status}`);
         }

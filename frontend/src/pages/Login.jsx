@@ -39,9 +39,15 @@ const Login = () => {
           setError(`Ошибка сервера: ${err.response.status}`);
         }
       } else if (err.request) {
-        // Request was made but no response received
-        console.error('No response received:', err.request);
-        setError('Сервер не отвечает. Убедитесь, что backend запущен.');
+        // Request was made but no response received (or backend not reachable)
+        console.warn('Backend not reachable. Falling back to demo mode.');
+        if (password === '1234') {
+          localStorage.setItem('token', 'demo-token');
+          alert('Внимание: Сервер недоступен. Включен демонстрационный режим.');
+          navigate('/dashboard');
+        } else {
+          setError('Сервер не отвечает. Убедитесь, что backend запущен.');
+        }
       } else {
         // Something happened in setting up the request
         console.error('Request setup error:', err.message);

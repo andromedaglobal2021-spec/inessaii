@@ -16,12 +16,31 @@ const Dashboard = () => {
   const fetchData = async (search = '', status = '') => {
     try {
       // In a real app, we would pass dateFilter to the backend
-      const [callsRes, statsRes] = await Promise.all([
+      const [callsRes, balanceRes] = await Promise.all([
         axios.get('/api/calls', { params: { search, status } }),
-        axios.get('/api/calls/stats')
+        axios.get('/api/balance')
       ]);
-      setCalls(callsRes.data);
-      setStats(statsRes.data);
+
+      const fetchedCalls = callsRes.data;
+      const fetchedBalance = balanceRes.data.balance;
+
+      // Calculate stats on the client side since we don't have a DB for aggregation
+      const totalCalls = fetchedCalls.length;
+      const completedCalls = fetchedCalls.filter(c => c.status === 'completed').length;
+      const missedCalls = fetchedCalls.filter(c => c.status === 'missed').length;
+      const totalDuration = fetchedCalls.reduce((acc, curr) => acc + (curr.duration || 0), 0);
+      const averageDuration = totalCalls > 0 ? Math.round(totalDuration / totalCalls) : 0;
+
+      const calculatedStats = {
+        totalCalls,
+        completedCalls,
+        missedCalls,
+        averageDuration,
+        balance: fetchedBalance
+      };
+
+      setCalls(fetchedCalls);
+      setStats(calculatedStats);
     } catch (error) {
       console.error('Error fetching data:', error);
       // Fallback to mock data for demo purposes if backend is unreachable

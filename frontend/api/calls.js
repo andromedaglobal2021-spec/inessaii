@@ -40,7 +40,7 @@ export default async function handler(req, res) {
   }
 }
 
-async function fetchVoximplantCalls(fromDateStr) {
+async function fetchVoximplantCalls(fromDateStr, toDateStr) {
   const accountId = process.env.VOXIMPLANT_ACCOUNT_ID;
   const apiKey = process.env.VOXIMPLANT_API_KEY;
 
@@ -55,8 +55,14 @@ async function fetchVoximplantCalls(fromDateStr) {
       api_key: apiKey,
       count: 1000, // Increased limit for real-time fetch
       with_records: true,
-      from_date: fromDateStr || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+      from_date: formatDateForVoximplant(fromDateStr || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
     };
+
+    if (toDateStr) {
+      params.to_date = formatDateForVoximplant(toDateStr);
+    }
+
+    console.log('Fetching Voximplant calls with params:', JSON.stringify(params)); // Debug log
 
     const response = await axios.get(`${VOXIMPLANT_API_URL}/GetCallHistory`, { params });
     
@@ -71,7 +77,7 @@ async function fetchVoximplantCalls(fromDateStr) {
       transcription: null,
       audio_url: record.record_url || null,
       cost: record.cost || 0,
-      timestamp: new Date(record.start_date).toISOString(),
+      timestamp: new Date(record.start_date + 'Z').toISOString(), // Ensure UTC if missing
       sentiment: (record.duration > 0 && record.successful !== false) ? 'neutral' : 'negative',
       source: 'Voximplant'
     }));
@@ -79,6 +85,12 @@ async function fetchVoximplantCalls(fromDateStr) {
     console.error('Voximplant fetch error:', error.message);
     return [];
   }
+}
+
+function formatDateForVoximplant(isoDateStr) {
+  if (!isoDateStr) return undefined;
+  // Convert ISO string (2025-01-15T12:00:00.000Z) to YYYY-MM-DD HH:mm:ss
+  return isoDateStr.replace('T', ' ').replace(/\.\d{3}Z$/, '');
 }
 
 async function fetchElevenLabsCalls() {

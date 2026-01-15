@@ -29,13 +29,17 @@ export default async function handler(req, res) {
     // 2. Get Expenses for the current month
     // Determine the start of the current month
     const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-    const endOfToday = now.toISOString();
+    // Format: YYYY-MM-DD HH:mm:ss
+    const formatDate = (date) => date.toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, '');
+    
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfMonthStr = formatDate(startOfMonth);
+    const endOfTodayStr = formatDate(now);
 
     const historyParams = {
       ...authParams,
-      from_date: startOfMonth,
-      to_date: endOfToday,
+      from_date: startOfMonthStr,
+      to_date: endOfTodayStr,
       count: 1000 // Ensure we get enough records. Pagination might be needed for heavy usage.
     };
 

@@ -220,7 +220,7 @@ async function fetchVoximplantCalls(fromDateStr, toDateStr) {
         audio_url: record.record_url || null,
         cost: record.cost || 0,
         timestamp: new Date(record.start_date + 'Z').toISOString(), // Ensure UTC if missing
-        sentiment: (record.duration > 0 && record.successful !== false) ? 'neutral' : 'negative',
+        sentiment: (record.duration > 0 && record.successful !== false) ? 'neutral' : 'error',
         source: 'Voximplant'
       };
     });
@@ -262,6 +262,13 @@ async function fetchElevenLabsCalls() {
       // Use transcript_summary from list response if available
       const summary = conv.transcript_summary || conv.analysis?.transcript_summary || 'No summary available';
       
+      let sentiment = 'neutral';
+      if (conv.call_successful === 'success') sentiment = 'positive';
+      // Map explicit errors or failed calls to 'error' sentiment
+      if (conv.status === 'error' || conv.call_successful === 'error' || conv.call_successful === false) {
+        sentiment = 'error';
+      }
+
       return {
         id: `el-${conv.conversation_id}`,
         external_id: conv.conversation_id,
@@ -272,7 +279,7 @@ async function fetchElevenLabsCalls() {
         summary: summary,
         audio_url: `/api/audio?conversation_id=${conv.conversation_id}`, // Use proxy endpoint
         timestamp: new Date(conv.start_time_unix_secs * 1000).toISOString(),
-        sentiment: conv.call_successful === 'success' ? 'positive' : 'neutral',
+        sentiment: sentiment,
         source: 'ElevenLabs',
         has_details: false // Flag to indicate we need to fetch full details
       };

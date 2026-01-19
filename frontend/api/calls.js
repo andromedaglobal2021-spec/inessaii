@@ -70,7 +70,7 @@ export default async function handler(req, res) {
       
       // Count errors
       const errorCalls = mergedCalls.filter(c => c.sentiment === 'error').length;
-      const elErrors = elevenLabsCalls.filter(c => c.status === 'error' || c.call_successful === false || c.duration === 0).length;
+      const elErrors = elevenLabsCalls.filter(c => c.sentiment === 'error' || c.duration === 0).length;
 
       // Create a readable dump of the first raw Voximplant record keys/values
       let rawDump = 'No Vox calls';
@@ -81,17 +81,16 @@ export default async function handler(req, res) {
         rawDump = JSON.stringify(safeRecord, null, 2);
       }
 
-      // Find first error call from EL to dump
-      const firstElError = elevenLabsCalls.find(c => c.sentiment === 'error');
-      const elErrorDump = firstElError ? JSON.stringify(firstElError, null, 2) : 'No EL Error calls found';
+      // Dump the first raw Eleven Labs record (passed from fetch function)
+      const rawElDump = elResult.rawFirstRecord ? JSON.stringify(elResult.rawFirstRecord, null, 2) : 'No raw EL record found';
 
       mergedCalls.unshift({
         id: 'sys-debug-info',
         caller_number: 'DEBUG INFO',
         duration: 0,
         status: 'missed',
-        transcription: `Vox: ${voximplantCalls.length}, EL: ${elevenLabsCalls.length} (Errors: ${elErrors})\nMerged Errors: ${errorCalls}\nWindow: 4h`,
-        summary: `FIRST VOX RAW: ${rawDump}\n\nFIRST EL ERROR RAW: ${elErrorDump}`, 
+        transcription: `Vox: ${voximplantCalls.length}, EL: ${elevenLabsCalls.length} (Errors: ${elErrors})\nMerged Errors: ${errorCalls}\nWindow: 4h\nTime Check: Vox ${vFirst} / EL ${eFirst}`,
+        summary: `FIRST VOX RAW: ${rawDump}\n\nFIRST EL RAW: ${rawElDump}`, 
         source: 'System',
         timestamp: new Date().toISOString(),
         sentiment: 'neutral'
@@ -252,7 +251,7 @@ async function fetchElevenLabsCalls() {
 
   if (!apiKey) {
     console.warn('Eleven Labs API Key missing');
-    return { calls: [], error: 'Missing API Key' };
+    return { calls: [], error: 'Missing API Key', rawFirstRecord: null };
   }
 
   try {
@@ -261,9 +260,10 @@ async function fetchElevenLabsCalls() {
       params: { page_size: 100 } // Reduced from 1000 to avoid 422 error
     });
 
-    if (!response.data || !response.data.conversations) return { calls: [], error: 'Empty response data' };
+    if (!response.data || !response.data.conversations) return { calls: [], error: 'Empty response data', rawFirstRecord: null };
 
     const allConversations = response.data.conversations;
+    const rawFirstRecord = allConversations[0] || null;
 
     // Map all conversations to standard format without fetching details eagerly
     const calls = allConversations.map(conv => {
@@ -272,8 +272,11 @@ async function fetchElevenLabsCalls() {
       
       let sentiment = 'neutral';
       if (conv.call_successful === 'success') sentiment = 'positive';
+      
+      const duration = conv.duration_secs || 0;
+
       // Map explicit errors, failed calls, or zero duration to 'error' sentiment
-      if (conv.status === 'error' || conv.call_successful === 'error' || conv.call_successful === false || conv.duration_secs === 0) {
+      if (conv.status === 'error' || conv.call_successful === 'error' || conv.call_successful === false || duration === 0) {
         sentiment = 'error';
       }
 
@@ -281,8 +284,8 @@ async function fetchElevenLabsCalls() {
         id: `el-${conv.conversation_id}`,
         external_id: conv.conversation_id,
         caller_number: 'Hidden', // Eleven Labs often hides this
-        duration: conv.duration_secs || 0,
-        status: (conv.status === 'completed' || conv.status === 'success' || conv.duration_secs > 0) ? 'completed' : 'missed',
+        duration: duration,
+        status: (conv.status === 'completed' || conv.status === 'success' || duration > 0) ? 'completed' : 'missed',
         transcription: conv.transcript_summary || 'Click expand to load details', // Placeholder
         summary: summary,
         audio_url: `/api/audio?conversation_id=${conv.conversation_id}`, // Use proxy endpoint
@@ -293,10 +296,10 @@ async function fetchElevenLabsCalls() {
       };
     });
 
-    return { calls, error: null };
+    return { calls, error: null, rawFirstRecord };
 
   } catch (error) {
     console.error('Eleven Labs fetch error:', error.message);
-    return { calls: [], error: error.message };
+    return { calls: [], error: error.message, rawFirstRecord: null };
   }
 }

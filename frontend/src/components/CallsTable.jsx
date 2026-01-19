@@ -39,7 +39,7 @@ const CallsTable = ({ calls, onSearch }) => {
     const isExpanding = expandedRow !== id;
     setExpandedRow(isExpanding ? id : null);
 
-    if (isExpanding && source === 'ElevenLabs' && externalId && !callDetails[id] && !loadingDetails[id]) {
+    if (isExpanding && (source === 'ElevenLabs' || source === 'Voximplant + AI') && externalId && !callDetails[id] && !loadingDetails[id]) {
       // Fetch details on demand
       setLoadingDetails(prev => ({ ...prev, [id]: true }));
       try {

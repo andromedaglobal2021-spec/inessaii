@@ -159,64 +159,33 @@ async function fetchElevenLabsCalls() {
   try {
     const response = await axios.get(`${ELEVEN_LABS_API_URL}/convai/conversations`, {
       headers: { 'xi-api-key': apiKey },
-      params: { page_size: 1000 } // Increased limit to fetch all calls
+      params: { page_size: 1000 } // Fetch all calls
     });
 
     if (!response.data || !response.data.conversations) return [];
 
-    // Limit to recent 20 calls to avoid rate limits and timeouts
-    const recentConversations = response.data.conversations.slice(0, 20);
+    const allConversations = response.data.conversations;
 
-    const detailedCalls = await Promise.all(recentConversations.map(async (conv) => {
-      try {
-        const detailResponse = await axios.get(`${ELEVEN_LABS_API_URL}/convai/conversations/${conv.conversation_id}`, {
-          headers: { 'xi-api-key': apiKey }
-        });
-        const details = detailResponse.data;
-        
-        // Format transcript
-        const transcriptText = details.transcript 
-          ? details.transcript.map(msg => `${msg.role === 'agent' ? 'Agent' : 'User'}: ${msg.message}`).join('\n')
-          : 'No transcript available';
-
-        // Get summary
-        const summary = details.analysis && details.analysis.transcript_summary 
-          ? details.analysis.transcript_summary 
-          : 'No summary available';
-
-        return {
-          id: `el-${conv.conversation_id}`,
-          external_id: conv.conversation_id,
-          caller_number: 'Hidden', // Eleven Labs often hides this
-          duration: conv.duration_secs || 0,
-          status: conv.status === 'completed' ? 'completed' : 'missed',
-          transcription: transcriptText,
-          summary: summary,
-          audio_url: `${ELEVEN_LABS_API_URL}/convai/conversations/${conv.conversation_id}/audio`, // Audio endpoint
-          timestamp: new Date(conv.start_time_unix_secs * 1000).toISOString(),
-          sentiment: conv.call_successful === 'success' ? 'positive' : 'neutral',
-          source: 'ElevenLabs'
-        };
-      } catch (err) {
-        console.error(`Failed to fetch details for conversation ${conv.conversation_id}:`, err.message);
-        // Fallback to basic info if detail fetch fails
-        return {
-          id: `el-${conv.conversation_id}`,
-          external_id: conv.conversation_id,
-          caller_number: 'Hidden',
-          duration: conv.duration_secs || 0,
-          status: (conv.status === 'completed' || conv.status === 'success' || conv.duration_secs > 0) ? 'completed' : 'missed',
-          transcription: 'Failed to load details',
-          summary: 'Failed to load details',
-          audio_url: `/api/audio?conversation_id=${conv.conversation_id}`,
-          timestamp: new Date(conv.start_time_unix_secs * 1000).toISOString(),
-          sentiment: conv.call_successful === 'success' ? 'positive' : 'neutral',
-          source: 'ElevenLabs'
-        };
-      }
-    }));
-
-    return detailedCalls;
+    // Map all conversations to standard format without fetching details eagerly
+    return allConversations.map(conv => {
+      // Use transcript_summary from list response if available
+      const summary = conv.transcript_summary || conv.analysis?.transcript_summary || 'No summary available';
+      
+      return {
+        id: `el-${conv.conversation_id}`,
+        external_id: conv.conversation_id,
+        caller_number: 'Hidden', // Eleven Labs often hides this
+        duration: conv.duration_secs || 0,
+        status: (conv.status === 'completed' || conv.status === 'success' || conv.duration_secs > 0) ? 'completed' : 'missed',
+        transcription: conv.transcript_summary || 'Click expand to load details', // Placeholder
+        summary: summary,
+        audio_url: `/api/audio?conversation_id=${conv.conversation_id}`, // Use proxy endpoint
+        timestamp: new Date(conv.start_time_unix_secs * 1000).toISOString(),
+        sentiment: conv.call_successful === 'success' ? 'positive' : 'neutral',
+        source: 'ElevenLabs',
+        has_details: false // Flag to indicate we need to fetch full details
+      };
+    });
   } catch (error) {
     console.error('Eleven Labs fetch error:', error.message);
     return [];

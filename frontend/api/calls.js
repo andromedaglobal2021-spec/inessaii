@@ -11,9 +11,13 @@ export default async function handler(req, res) {
   const { search, status, from_date, to_date } = req.query;
 
   try {
-    const voximplantCalls = await fetchVoximplantCalls(from_date, to_date);
-    const elevenLabsResult = await fetchElevenLabsCalls(); 
-    const elevenLabsCalls = elevenLabsResult.calls || []; 
+    const voxResult = await fetchVoximplantCalls(from_date, to_date);
+    const voximplantCalls = voxResult.calls || [];
+    const rawVoxRecord = voxResult.rawFirstRecord;
+
+    const elResult = await fetchElevenLabsCalls(); 
+    const elevenLabsCalls = elResult.calls || []; 
+    const elError = elResult.error;
 
     // Merge logic: Match Eleven Labs calls to Voximplant calls based on timestamp
     const mergedCalls = [];
@@ -24,11 +28,11 @@ export default async function handler(req, res) {
       const voxTime = new Date(voxCall.timestamp).getTime();
       
       // Find a matching Eleven Labs call that hasn't been used yet
-      // Allowing a buffer of 5 minutes (300000ms) to account for any clock skew or long delays
+      // Allowing a buffer of 4 hours (14400000ms) to account for timezone shifts
       const match = elevenLabsCalls.find(elCall => {
         if (usedElevenLabsIds.has(elCall.id)) return false;
         const elTime = new Date(elCall.timestamp).getTime();
-        return Math.abs(voxTime - elTime) < 300000; // 5 minutes diff
+        return Math.abs(voxTime - elTime) < 14400000; // 4 hours diff
       });
 
       if (match) {
@@ -60,17 +64,26 @@ export default async function handler(req, res) {
     });
 
     // DIAGNOSTIC: Debug row to check timestamps and counts
-    if (mergedCalls.length > 0) {
+    if (mergedCalls.length > 0 || elError) {
       const vFirst = voximplantCalls[0] ? new Date(voximplantCalls[0].timestamp).toISOString() : 'N/A';
       const eFirst = elevenLabsCalls[0] ? new Date(elevenLabsCalls[0].timestamp).toISOString() : 'N/A';
       
+      // Create a readable dump of the first raw Voximplant record keys/values
+      let rawDump = 'No Vox calls';
+      if (rawVoxRecord) {
+        // Filter out massive arrays to keep it readable
+        const safeRecord = { ...rawVoxRecord };
+        delete safeRecord.records; // remove nested records to save space
+        rawDump = JSON.stringify(safeRecord, null, 2);
+      }
+
       mergedCalls.unshift({
         id: 'sys-debug-info',
         caller_number: 'DEBUG INFO',
         duration: 0,
         status: 'missed',
-        transcription: `Vox calls: ${voximplantCalls.length}, EL calls: ${elevenLabsCalls.length}\nVox First: ${vFirst}\nEL First: ${eFirst}\nWindow: 4 hours`,
-        summary: 'Technical debug info. Please ignore.',
+        transcription: `Vox: ${voximplantCalls.length}, EL: ${elevenLabsCalls.length}\nEL Error: ${elError || 'None'}\nVox First: ${vFirst}\nEL First: ${eFirst}\nWindow: 4h`,
+        summary: `FIRST VOX RAW: ${rawDump}`, // Put raw JSON here
         source: 'System',
         timestamp: new Date().toISOString(),
         sentiment: 'neutral'
@@ -149,7 +162,7 @@ async function fetchVoximplantCalls(fromDateStr, toDateStr) {
 
   if (!accountId || !apiKey) {
     console.warn('Voximplant credentials missing');
-    return [];
+    return { calls: [], rawFirstRecord: null };
   }
 
   try {
@@ -169,9 +182,11 @@ async function fetchVoximplantCalls(fromDateStr, toDateStr) {
 
     const response = await axios.get(`${VOXIMPLANT_API_URL}/GetCallHistory`, { params });
     
-    if (!response.data || !response.data.result) return [];
+    if (!response.data || !response.data.result) return { calls: [], rawFirstRecord: null };
 
-    return response.data.result.map(record => {
+    const rawFirstRecord = response.data.result[0] || null;
+
+    const calls = response.data.result.map(record => {
       // Deep search for phone number in nested records if top-level is missing
       let phoneNumber = record.remote_number || record.destination_number;
       
@@ -197,9 +212,12 @@ async function fetchVoximplantCalls(fromDateStr, toDateStr) {
         source: 'Voximplant'
       };
     });
+
+    return { calls, rawFirstRecord };
+
   } catch (error) {
     console.error('Voximplant fetch error:', error.message);
-    return [];
+    return { calls: [], rawFirstRecord: null };
   }
 }
 
@@ -214,7 +232,7 @@ async function fetchElevenLabsCalls() {
 
   if (!apiKey) {
     console.warn('Eleven Labs API Key missing');
-    return [];
+    return { calls: [], error: 'Missing API Key' };
   }
 
   try {
@@ -223,12 +241,12 @@ async function fetchElevenLabsCalls() {
       params: { page_size: 1000 } // Fetch all calls
     });
 
-    if (!response.data || !response.data.conversations) return [];
+    if (!response.data || !response.data.conversations) return { calls: [], error: 'Empty response data' };
 
     const allConversations = response.data.conversations;
 
     // Map all conversations to standard format without fetching details eagerly
-    return allConversations.map(conv => {
+    const calls = allConversations.map(conv => {
       // Use transcript_summary from list response if available
       const summary = conv.transcript_summary || conv.analysis?.transcript_summary || 'No summary available';
       
@@ -247,8 +265,11 @@ async function fetchElevenLabsCalls() {
         has_details: false // Flag to indicate we need to fetch full details
       };
     });
+
+    return { calls, error: null };
+
   } catch (error) {
     console.error('Eleven Labs fetch error:', error.message);
-    return [];
+    return { calls: [], error: error.message };
   }
 }

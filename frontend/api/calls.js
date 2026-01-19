@@ -58,6 +58,24 @@ export default async function handler(req, res) {
       }
     });
 
+    // DIAGNOSTIC: Debug row to check timestamps and counts
+    if (mergedCalls.length > 0) {
+      const vFirst = voximplantCalls[0] ? new Date(voximplantCalls[0].timestamp).toISOString() : 'N/A';
+      const eFirst = elevenLabsCalls[0] ? new Date(elevenLabsCalls[0].timestamp).toISOString() : 'N/A';
+      
+      mergedCalls.unshift({
+        id: 'sys-debug-info',
+        caller_number: 'DEBUG INFO',
+        duration: 0,
+        status: 'missed',
+        transcription: `Vox calls: ${voximplantCalls.length}, EL calls: ${elevenLabsCalls.length}\nVox First: ${vFirst}\nEL First: ${eFirst}\nWindow: 4 hours`,
+        summary: 'Technical debug info. Please ignore.',
+        source: 'System',
+        timestamp: new Date().toISOString(),
+        sentiment: 'neutral'
+      });
+    }
+
     // DIAGNOSTIC: Check if we have missing keys and add a system notification call
     if (voximplantCalls.length === 0 && (!process.env.VOXIMPLANT_ACCOUNT_ID || !process.env.VOXIMPLANT_API_KEY)) {
       mergedCalls.unshift({
@@ -152,19 +170,32 @@ async function fetchVoximplantCalls(fromDateStr, toDateStr) {
     
     if (!response.data || !response.data.result) return [];
 
-    return response.data.result.map(record => ({
-      id: `vox-${record.call_session_history_id}`,
-      external_id: String(record.call_session_history_id),
-      caller_number: record.remote_number || record.destination_number || 'Unknown',
-      duration: record.duration || 0,
-      status: (record.duration > 0 && record.successful !== false) ? 'completed' : 'missed',
-      transcription: null,
-      audio_url: record.record_url || null,
-      cost: record.cost || 0,
-      timestamp: new Date(record.start_date + 'Z').toISOString(), // Ensure UTC if missing
-      sentiment: (record.duration > 0 && record.successful !== false) ? 'neutral' : 'negative',
-      source: 'Voximplant'
-    }));
+    return response.data.result.map(record => {
+      // Deep search for phone number in nested records if top-level is missing
+      let phoneNumber = record.remote_number || record.destination_number;
+      
+      if ((!phoneNumber || phoneNumber === 'Unknown') && record.records && Array.isArray(record.records)) {
+        // Try to find a record with a destination number (outbound) or remote number (inbound)
+        const recordWithNumber = record.records.find(r => r.destination_number || r.remote_number);
+        if (recordWithNumber) {
+          phoneNumber = recordWithNumber.destination_number || recordWithNumber.remote_number;
+        }
+      }
+
+      return {
+        id: `vox-${record.call_session_history_id}`,
+        external_id: String(record.call_session_history_id),
+        caller_number: phoneNumber || 'Unknown',
+        duration: record.duration || 0,
+        status: (record.duration > 0 && record.successful !== false) ? 'completed' : 'missed',
+        transcription: null,
+        audio_url: record.record_url || null,
+        cost: record.cost || 0,
+        timestamp: new Date(record.start_date + 'Z').toISOString(), // Ensure UTC if missing
+        sentiment: (record.duration > 0 && record.successful !== false) ? 'neutral' : 'negative',
+        source: 'Voximplant'
+      };
+    });
   } catch (error) {
     console.error('Voximplant fetch error:', error.message);
     return [];

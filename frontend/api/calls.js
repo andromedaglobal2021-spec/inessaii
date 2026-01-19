@@ -190,6 +190,18 @@ async function fetchVoximplantCalls(fromDateStr, toDateStr) {
       // Deep search for phone number in nested records if top-level is missing
       let phoneNumber = record.remote_number || record.destination_number;
       
+      // 1. Try custom_data (Voximplant Kit often stores it here)
+      if (!phoneNumber || phoneNumber === 'Unknown') {
+        try {
+          if (record.custom_data) {
+            const custom = JSON.parse(record.custom_data);
+            if (custom.phone) phoneNumber = custom.phone;
+          }
+        } catch (e) {
+          // ignore parsing error
+        }
+      }
+
       if ((!phoneNumber || phoneNumber === 'Unknown') && record.records && Array.isArray(record.records)) {
         // Try to find a record with a destination number (outbound) or remote number (inbound)
         const recordWithNumber = record.records.find(r => r.destination_number || r.remote_number);
@@ -238,7 +250,7 @@ async function fetchElevenLabsCalls() {
   try {
     const response = await axios.get(`${ELEVEN_LABS_API_URL}/convai/conversations`, {
       headers: { 'xi-api-key': apiKey },
-      params: { page_size: 1000 } // Fetch all calls
+      params: { page_size: 100 } // Reduced from 1000 to avoid 422 error
     });
 
     if (!response.data || !response.data.conversations) return { calls: [], error: 'Empty response data' };

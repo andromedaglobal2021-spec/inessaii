@@ -150,10 +150,10 @@ async function fetchElevenLabsCalls() {
           external_id: conv.conversation_id,
           caller_number: 'Hidden',
           duration: conv.duration_secs || 0,
-          status: conv.status === 'completed' ? 'completed' : 'missed',
+          status: (conv.status === 'completed' || conv.status === 'success' || conv.duration_secs > 0) ? 'completed' : 'missed',
           transcription: 'Failed to load details',
           summary: 'Failed to load details',
-          audio_url: null,
+          audio_url: `/api/audio?conversation_id=${conv.conversation_id}`,
           timestamp: new Date(conv.start_time_unix_secs * 1000).toISOString(),
           sentiment: conv.call_successful === 'success' ? 'positive' : 'neutral',
           source: 'ElevenLabs'

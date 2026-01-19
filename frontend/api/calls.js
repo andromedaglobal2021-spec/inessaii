@@ -276,7 +276,7 @@ async function fetchElevenLabsCalls() {
       const duration = conv.duration_secs || 0;
 
       // Map explicit errors, failed calls, or zero duration to 'error' sentiment
-      if (conv.status === 'error' || conv.call_successful === 'error' || conv.call_successful === false || duration === 0) {
+      if (conv.status === 'error' || conv.status === 'failed' || conv.call_successful === 'error' || conv.call_successful === false || duration === 0) {
         sentiment = 'error';
       }
 

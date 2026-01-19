@@ -36,6 +36,13 @@ export default async function handler(req, res) {
       });
 
       if (match) {
+        // If Voximplant call was successful (duration > 0), don't show "Error" sentiment
+        // even if Eleven Labs failed. Treat it as "Neutral" (no AI analysis).
+        // Only show "Error" if the call itself failed (0 duration).
+        const sentiment = (voxCall.duration > 0 && match.sentiment === 'error') 
+          ? 'neutral' 
+          : match.sentiment;
+
         // Merge them
         mergedCalls.push({
           ...voxCall, // Keep Voximplant base data (ID, Number, Cost)
@@ -45,7 +52,7 @@ export default async function handler(req, res) {
           transcription: match.transcription,
           summary: match.summary,
           audio_url: match.audio_url,
-          sentiment: match.sentiment,
+          sentiment: sentiment,
           source: 'Voximplant + AI', // Combined source
           has_details: match.has_details,
           external_id: match.external_id // Needed for details fetch

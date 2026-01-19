@@ -104,7 +104,7 @@ async function fetchElevenLabsCalls() {
   try {
     const response = await axios.get(`${ELEVEN_LABS_API_URL}/convai/conversations`, {
       headers: { 'xi-api-key': apiKey },
-      params: { page_size: 50 }
+      params: { page_size: 1000 } // Increased limit to fetch all calls
     });
 
     if (!response.data || !response.data.conversations) return [];

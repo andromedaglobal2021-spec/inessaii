@@ -32,8 +32,28 @@ const CallsTable = ({ calls, onSearch }) => {
     }
   };
 
-  const toggleExpand = (id) => {
-    setExpandedRow(expandedRow === id ? null : id);
+  const [loadingDetails, setLoadingDetails] = useState({});
+  const [callDetails, setCallDetails] = useState({});
+
+  const toggleExpand = async (id, externalId, source) => {
+    const isExpanding = expandedRow !== id;
+    setExpandedRow(isExpanding ? id : null);
+
+    if (isExpanding && source === 'ElevenLabs' && externalId && !callDetails[id] && !loadingDetails[id]) {
+      // Fetch details on demand
+      setLoadingDetails(prev => ({ ...prev, [id]: true }));
+      try {
+        const response = await fetch(`/api/conversation?conversation_id=${externalId}`);
+        if (response.ok) {
+          const data = await response.json();
+          setCallDetails(prev => ({ ...prev, [id]: data }));
+        }
+      } catch (error) {
+        console.error('Failed to load details', error);
+      } finally {
+        setLoadingDetails(prev => ({ ...prev, [id]: false }));
+      }
+    }
   };
 
   const formatDate = (dateString) => {

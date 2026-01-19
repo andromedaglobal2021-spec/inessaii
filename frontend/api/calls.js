@@ -12,7 +12,8 @@ export default async function handler(req, res) {
 
   try {
     const voximplantCalls = await fetchVoximplantCalls(from_date, to_date);
-    const elevenLabsCalls = await fetchElevenLabsCalls(); 
+    const elevenLabsResult = await fetchElevenLabsCalls(); 
+    const elevenLabsCalls = elevenLabsResult.calls || []; 
 
     // Merge logic: Match Eleven Labs calls to Voximplant calls based on timestamp
     const mergedCalls = [];

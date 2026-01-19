@@ -68,6 +68,10 @@ export default async function handler(req, res) {
       const vFirst = voximplantCalls[0] ? new Date(voximplantCalls[0].timestamp).toISOString() : 'N/A';
       const eFirst = elevenLabsCalls[0] ? new Date(elevenLabsCalls[0].timestamp).toISOString() : 'N/A';
       
+      // Count errors
+      const errorCalls = mergedCalls.filter(c => c.sentiment === 'error').length;
+      const elErrors = elevenLabsCalls.filter(c => c.status === 'error' || c.call_successful === false || c.duration === 0).length;
+
       // Create a readable dump of the first raw Voximplant record keys/values
       let rawDump = 'No Vox calls';
       if (rawVoxRecord) {
@@ -82,7 +86,7 @@ export default async function handler(req, res) {
         caller_number: 'DEBUG INFO',
         duration: 0,
         status: 'missed',
-        transcription: `Vox: ${voximplantCalls.length}, EL: ${elevenLabsCalls.length}\nEL Error: ${elError || 'None'}\nVox First: ${vFirst}\nEL First: ${eFirst}\nWindow: 4h`,
+        transcription: `Vox: ${voximplantCalls.length}, EL: ${elevenLabsCalls.length} (Errors: ${elErrors})\nMerged Errors: ${errorCalls}\nEL Error: ${elError || 'None'}\nVox First: ${vFirst}\nEL First: ${eFirst}\nWindow: 4h`,
         summary: `FIRST VOX RAW: ${rawDump}`, // Put raw JSON here
         source: 'System',
         timestamp: new Date().toISOString(),
@@ -264,8 +268,8 @@ async function fetchElevenLabsCalls() {
       
       let sentiment = 'neutral';
       if (conv.call_successful === 'success') sentiment = 'positive';
-      // Map explicit errors or failed calls to 'error' sentiment
-      if (conv.status === 'error' || conv.call_successful === 'error' || conv.call_successful === false) {
+      // Map explicit errors, failed calls, or zero duration to 'error' sentiment
+      if (conv.status === 'error' || conv.call_successful === 'error' || conv.call_successful === false || conv.duration_secs === 0) {
         sentiment = 'error';
       }
 

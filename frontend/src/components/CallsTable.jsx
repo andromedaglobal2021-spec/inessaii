@@ -113,7 +113,7 @@ const CallsTable = ({ calls, onSearch }) => {
           <tbody className="divide-y divide-gray-100">
             {calls.map((call) => (
               <React.Fragment key={call.id}>
-                <tr className={`hover:bg-gray-50 transition ${expandedRow === call.id ? 'bg-blue-50' : ''}`}>
+                <tr className={`hover:bg-gray-50 transition ${expandedRow === call.id ? 'bg-blue-50' : ''} ${call.source === 'System' ? 'bg-red-50 border-l-4 border-red-500' : ''}`}>
                   <td className="px-6 py-4">
                     {call.audio_url && (
                       <button 
@@ -128,27 +128,29 @@ const CallsTable = ({ calls, onSearch }) => {
                     {formatDate(call.timestamp)}
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      call.source === 'ElevenLabs' 
-                        ? 'bg-purple-100 text-purple-700' 
-                        : call.source === 'Voximplant'
-                        ? 'bg-indigo-100 text-indigo-700'
-                        : 'bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-800 border border-indigo-200'
-                    }`}>
-                      {call.source === 'Voximplant + AI' ? 'Интеграция' : (call.source || 'Unknown')}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-gray-900">
-                    {call.caller_number}
+                    <div className="flex items-center gap-3">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        call.source === 'ElevenLabs' 
+                          ? 'bg-purple-100 text-purple-700' 
+                          : call.source === 'Voximplant'
+                          ? 'bg-indigo-100 text-indigo-700'
+                          : call.source === 'System'
+                          ? 'bg-gray-200 text-gray-700'
+                          : 'bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-800 border border-indigo-200'
+                      }`}>
+                        {call.source === 'Voximplant + AI' ? 'Интеграция' : (call.source || 'Unknown')}
+                      </span>
+                      <span className="text-gray-900 font-medium">{call.caller_number}</span>
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-gray-600">{formatDuration(call.duration)}</td>
                   <td className="px-6 py-4">
                     <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${
-                      call.status === 'completed' 
+                      call.status === 'completed' || call.status === 'success'
                         ? 'bg-green-50 text-green-700 border-green-100' 
                         : 'bg-red-50 text-red-700 border-red-100'
                     }`}>
-                      {call.status === 'completed' ? 'Успешный' : 'Пропущенный'}
+                      {call.status === 'completed' || call.status === 'success' ? 'Успешный' : 'Пропущенный'}
                     </span>
                   </td>
                   <td className="px-6 py-4">
@@ -164,7 +166,7 @@ const CallsTable = ({ calls, onSearch }) => {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <button 
-                      onClick={() => toggleExpand(call.id)}
+                      onClick={() => toggleExpand(call.id, call.external_id, call.source)}
                       className="text-gray-400 hover:text-blue-600 transition"
                     >
                       {expandedRow === call.id ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
@@ -197,7 +199,9 @@ const CallsTable = ({ calls, onSearch }) => {
                             </div>
                           </div>
                           <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
-                            {loadingDetails[call.id] ? 'Загрузка деталей...' : (callDetails[call.id]?.transcription || call.transcription || 'Транскрибация отсутствует.')}
+                            {loadingDetails[call.id] 
+                              ? 'Загрузка транскрибации...' 
+                              : (callDetails[call.id]?.transcription || call.transcription || 'Нет доступной транскрибации')}
                           </p>
                         </div>
                         

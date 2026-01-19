@@ -109,22 +109,59 @@ async function fetchElevenLabsCalls() {
 
     if (!response.data || !response.data.conversations) return [];
 
-    // Note: To get full details/transcription, we'd need N+1 calls, 
-    // but for list view we'll skip detailed transcript fetch to be fast.
-    // We can implement a separate endpoint for call details.
-    
-    return response.data.conversations.map(conv => ({
-      id: `el-${conv.conversation_id}`,
-      external_id: conv.conversation_id,
-      caller_number: 'Hidden', // Eleven Labs often hides this
-      duration: conv.duration_secs || 0,
-      status: conv.status === 'completed' ? 'completed' : 'missed',
-      transcription: conv.transcript_summary || 'No transcription summary', // Use summary if available
-      audio_url: null, // Requires detail fetch
-      timestamp: new Date(conv.start_time_unix_secs * 1000).toISOString(),
-      sentiment: conv.call_successful === 'success' ? 'positive' : 'neutral',
-      source: 'ElevenLabs'
+    // Limit to recent 20 calls to avoid rate limits and timeouts
+    const recentConversations = response.data.conversations.slice(0, 20);
+
+    const detailedCalls = await Promise.all(recentConversations.map(async (conv) => {
+      try {
+        const detailResponse = await axios.get(`${ELEVEN_LABS_API_URL}/convai/conversations/${conv.conversation_id}`, {
+          headers: { 'xi-api-key': apiKey }
+        });
+        const details = detailResponse.data;
+        
+        // Format transcript
+        const transcriptText = details.transcript 
+          ? details.transcript.map(msg => `${msg.role === 'agent' ? 'Agent' : 'User'}: ${msg.message}`).join('\n')
+          : 'No transcript available';
+
+        // Get summary
+        const summary = details.analysis && details.analysis.transcript_summary 
+          ? details.analysis.transcript_summary 
+          : 'No summary available';
+
+        return {
+          id: `el-${conv.conversation_id}`,
+          external_id: conv.conversation_id,
+          caller_number: 'Hidden', // Eleven Labs often hides this
+          duration: conv.duration_secs || 0,
+          status: conv.status === 'completed' ? 'completed' : 'missed',
+          transcription: transcriptText,
+          summary: summary,
+          audio_url: `${ELEVEN_LABS_API_URL}/convai/conversations/${conv.conversation_id}/audio`, // Audio endpoint
+          timestamp: new Date(conv.start_time_unix_secs * 1000).toISOString(),
+          sentiment: conv.call_successful === 'success' ? 'positive' : 'neutral',
+          source: 'ElevenLabs'
+        };
+      } catch (err) {
+        console.error(`Failed to fetch details for conversation ${conv.conversation_id}:`, err.message);
+        // Fallback to basic info if detail fetch fails
+        return {
+          id: `el-${conv.conversation_id}`,
+          external_id: conv.conversation_id,
+          caller_number: 'Hidden',
+          duration: conv.duration_secs || 0,
+          status: conv.status === 'completed' ? 'completed' : 'missed',
+          transcription: 'Failed to load details',
+          summary: 'Failed to load details',
+          audio_url: null,
+          timestamp: new Date(conv.start_time_unix_secs * 1000).toISOString(),
+          sentiment: conv.call_successful === 'success' ? 'positive' : 'neutral',
+          source: 'ElevenLabs'
+        };
+      }
     }));
+
+    return detailedCalls;
   } catch (error) {
     console.error('Eleven Labs fetch error:', error.message);
     return [];

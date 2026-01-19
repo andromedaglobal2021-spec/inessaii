@@ -156,6 +156,19 @@ const CallsTable = ({ calls, onSearch }) => {
                     <td colSpan="7" className="px-6 py-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-inner">
+                          {call.summary && (
+                            <div className="mb-6 pb-4 border-b border-gray-100">
+                              <div className="flex items-start space-x-3 mb-2">
+                                <FileText className="w-5 h-5 text-blue-500 mt-0.5" />
+                                <div>
+                                  <h4 className="text-sm font-semibold text-gray-900">Итог звонка</h4>
+                                </div>
+                              </div>
+                              <p className="text-gray-700 text-sm leading-relaxed">
+                                {call.summary}
+                              </p>
+                            </div>
+                          )}
                           <div className="flex items-start space-x-3 mb-4">
                             <FileText className="w-5 h-5 text-gray-400 mt-0.5" />
                             <div>

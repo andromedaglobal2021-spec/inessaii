@@ -23,11 +23,11 @@ export default async function handler(req, res) {
       const voxTime = new Date(voxCall.timestamp).getTime();
       
       // Find a matching Eleven Labs call that hasn't been used yet
-      // Allowing a buffer of 60 seconds (Eleven Labs call usually starts shortly after Voximplant call)
+      // Allowing a buffer of 5 minutes (300000ms) to account for any clock skew or long delays
       const match = elevenLabsCalls.find(elCall => {
         if (usedElevenLabsIds.has(elCall.id)) return false;
         const elTime = new Date(elCall.timestamp).getTime();
-        return Math.abs(voxTime - elTime) < 60000; // 60 seconds diff
+        return Math.abs(voxTime - elTime) < 300000; // 5 minutes diff
       });
 
       if (match) {
@@ -57,6 +57,35 @@ export default async function handler(req, res) {
         mergedCalls.push(elCall);
       }
     });
+
+    // DIAGNOSTIC: Check if we have missing keys and add a system notification call
+    if (voximplantCalls.length === 0 && (!process.env.VOXIMPLANT_ACCOUNT_ID || !process.env.VOXIMPLANT_API_KEY)) {
+      mergedCalls.unshift({
+        id: 'sys-error-vox',
+        caller_number: 'СИСТЕМА',
+        duration: 0,
+        status: 'missed',
+        transcription: 'ОШИБКА: Не настроены ключи Voximplant (VOXIMPLANT_ACCOUNT_ID, VOXIMPLANT_API_KEY). Номера телефонов не могут быть загружены.',
+        summary: 'Проверьте настройки Environment Variables в Vercel.',
+        source: 'System',
+        timestamp: new Date().toISOString(),
+        sentiment: 'negative'
+      });
+    }
+
+    if (elevenLabsCalls.length === 0 && !process.env.ELEVEN_LABS_API_KEY) {
+      mergedCalls.unshift({
+        id: 'sys-error-el',
+        caller_number: 'СИСТЕМА',
+        duration: 0,
+        status: 'missed',
+        transcription: 'ОШИБКА: Не настроен ключ Eleven Labs (ELEVEN_LABS_API_KEY). Звонки ИИ не могут быть загружены.',
+        summary: 'Проверьте настройки Environment Variables в Vercel.',
+        source: 'System',
+        timestamp: new Date().toISOString(),
+        sentiment: 'negative'
+      });
+    }
 
     let allCalls = mergedCalls;
 

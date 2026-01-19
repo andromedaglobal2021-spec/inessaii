@@ -133,9 +133,9 @@ const CallsTable = ({ calls, onSearch }) => {
                         ? 'bg-purple-100 text-purple-700' 
                         : call.source === 'Voximplant'
                         ? 'bg-indigo-100 text-indigo-700'
-                        : 'bg-gray-100 text-gray-700'
+                        : 'bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-800 border border-indigo-200'
                     }`}>
-                      {call.source || 'Unknown'}
+                      {call.source === 'Voximplant + AI' ? 'Интеграция' : (call.source || 'Unknown')}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-gray-900">
@@ -176,7 +176,7 @@ const CallsTable = ({ calls, onSearch }) => {
                     <td colSpan="7" className="px-6 py-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-inner">
-                          {call.summary && (
+                          {(callDetails[call.id]?.summary || call.summary) && (
                             <div className="mb-6 pb-4 border-b border-gray-100">
                               <div className="flex items-start space-x-3 mb-2">
                                 <FileText className="w-5 h-5 text-blue-500 mt-0.5" />
@@ -185,7 +185,7 @@ const CallsTable = ({ calls, onSearch }) => {
                                 </div>
                               </div>
                               <p className="text-gray-700 text-sm leading-relaxed">
-                                {call.summary}
+                                {callDetails[call.id]?.summary || call.summary}
                               </p>
                             </div>
                           )}
@@ -197,7 +197,7 @@ const CallsTable = ({ calls, onSearch }) => {
                             </div>
                           </div>
                           <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
-                            {call.transcription || 'Транскрибация отсутствует.'}
+                            {loadingDetails[call.id] ? 'Загрузка деталей...' : (callDetails[call.id]?.transcription || call.transcription || 'Транскрибация отсутствует.')}
                           </p>
                         </div>
                         

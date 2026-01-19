@@ -12,22 +12,77 @@ export default async function handler(req, res) {
 
   try {
     const voximplantCalls = await fetchVoximplantCalls(from_date, to_date);
-    const elevenLabsCalls = await fetchElevenLabsCalls(); // TODO: Implement date filtering for ElevenLabs too if needed
+    const elevenLabsCalls = await fetchElevenLabsCalls(); 
 
-    let allCalls = [...voximplantCalls, ...elevenLabsCalls];
+    // Merge logic: Match Eleven Labs calls to Voximplant calls based on timestamp
+    const mergedCalls = [];
+    const usedElevenLabsIds = new Set();
+
+    // 1. Process Voximplant calls and try to find matching Eleven Labs calls
+    voximplantCalls.forEach(voxCall => {
+      const voxTime = new Date(voxCall.timestamp).getTime();
+      
+      // Find a matching Eleven Labs call that hasn't been used yet
+      // Allowing a buffer of 60 seconds (Eleven Labs call usually starts shortly after Voximplant call)
+      const match = elevenLabsCalls.find(elCall => {
+        if (usedElevenLabsIds.has(elCall.id)) return false;
+        const elTime = new Date(elCall.timestamp).getTime();
+        return Math.abs(voxTime - elTime) < 60000; // 60 seconds diff
+      });
+
+      if (match) {
+        // Merge them
+        mergedCalls.push({
+          ...voxCall, // Keep Voximplant base data (ID, Number, Cost)
+          id: voxCall.id, // Prefer Voximplant ID as primary
+          eleven_labs_id: match.id,
+          // Enrich with Eleven Labs data
+          transcription: match.transcription,
+          summary: match.summary,
+          audio_url: match.audio_url,
+          sentiment: match.sentiment,
+          source: 'Voximplant + AI', // Combined source
+          has_details: match.has_details,
+          external_id: match.external_id // Needed for details fetch
+        });
+        usedElevenLabsIds.add(match.id);
+      } else {
+        mergedCalls.push(voxCall);
+      }
+    });
+
+    // 2. Add remaining Eleven Labs calls that weren't matched
+    elevenLabsCalls.forEach(elCall => {
+      if (!usedElevenLabsIds.has(elCall.id)) {
+        mergedCalls.push(elCall);
+      }
+    });
+
+    let allCalls = mergedCalls;
 
     // Filter by search
     if (search) {
       const searchLower = search.toLowerCase();
       allCalls = allCalls.filter(call => 
         (call.caller_number && call.caller_number.toLowerCase().includes(searchLower)) ||
-        (call.transcription && call.transcription.toLowerCase().includes(searchLower))
+        (call.transcription && call.transcription.toLowerCase().includes(searchLower)) ||
+        (call.summary && call.summary.toLowerCase().includes(searchLower))
       );
     }
 
     // Filter by status
     if (status && status !== 'all') {
       allCalls = allCalls.filter(call => call.status === status);
+    }
+
+    // Filter by date (Client-side for merged list to be safe)
+    if (from_date || to_date) {
+      const from = from_date ? new Date(from_date).getTime() : 0;
+      const to = to_date ? new Date(to_date).getTime() : Infinity;
+      allCalls = allCalls.filter(call => {
+        const time = new Date(call.timestamp).getTime();
+        return time >= from && time <= to;
+      });
     }
 
     // Sort by timestamp descending

@@ -155,7 +155,7 @@ async function fetchVoximplantCalls(fromDateStr, toDateStr) {
     return response.data.result.map(record => ({
       id: `vox-${record.call_session_history_id}`,
       external_id: String(record.call_session_history_id),
-      caller_number: record.remote_number || 'Unknown',
+      caller_number: record.remote_number || record.destination_number || 'Unknown',
       duration: record.duration || 0,
       status: (record.duration > 0 && record.successful !== false) ? 'completed' : 'missed',
       transcription: null,

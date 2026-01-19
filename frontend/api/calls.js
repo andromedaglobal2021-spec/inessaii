@@ -81,13 +81,17 @@ export default async function handler(req, res) {
         rawDump = JSON.stringify(safeRecord, null, 2);
       }
 
+      // Find first error call from EL to dump
+      const firstElError = elevenLabsCalls.find(c => c.sentiment === 'error');
+      const elErrorDump = firstElError ? JSON.stringify(firstElError, null, 2) : 'No EL Error calls found';
+
       mergedCalls.unshift({
         id: 'sys-debug-info',
         caller_number: 'DEBUG INFO',
         duration: 0,
         status: 'missed',
-        transcription: `Vox: ${voximplantCalls.length}, EL: ${elevenLabsCalls.length} (Errors: ${elErrors})\nMerged Errors: ${errorCalls}\nEL Error: ${elError || 'None'}\nVox First: ${vFirst}\nEL First: ${eFirst}\nWindow: 4h`,
-        summary: `FIRST VOX RAW: ${rawDump}`, // Put raw JSON here
+        transcription: `Vox: ${voximplantCalls.length}, EL: ${elevenLabsCalls.length} (Errors: ${elErrors})\nMerged Errors: ${errorCalls}\nWindow: 4h`,
+        summary: `FIRST VOX RAW: ${rawDump}\n\nFIRST EL ERROR RAW: ${elErrorDump}`, 
         source: 'System',
         timestamp: new Date().toISOString(),
         sentiment: 'neutral'

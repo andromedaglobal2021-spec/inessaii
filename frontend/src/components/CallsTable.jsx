@@ -71,7 +71,7 @@ const CallsTable = ({ calls, onSearch }) => {
   return (
     <div className="bg-white shadow-sm rounded-xl border border-gray-100 overflow-hidden">
       <div className="p-6 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
-        <h3 className="text-lg font-bold text-gray-800">Список звонков (v3.5 Final)</h3>
+        <h3 className="text-lg font-bold text-gray-800">Список звонков (v3.6 DEBUG ERRORS)</h3>
         <div className="flex space-x-3 w-full sm:w-auto">
           <div className="relative flex-grow sm:flex-grow-0">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
